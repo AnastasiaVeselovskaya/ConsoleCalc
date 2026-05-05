@@ -1,0 +1,50 @@
+Checks: '
+-*,
+bugprone-*,
+-bugprone-easily-swappable-parameters,
+-bugprone-narrowing-conversions,
+clang-analyzer-*,
+concurrency-*,
+-concurrency-mt-unsafe,
+cppcoreguidelines-*,
+-cppcoreguidelines-pro-type-vararg,
+-cppcoreguidelines-avoid-c-arrays,
+-cppcoreguidelines-pro-bounds-pointer-arithmetic,
+-cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+-cppcoreguidelines-narrowing-conversions,
+-cppcoreguidelines-init-variables,
+google-*,
+-google-runtime-int,
+-google-readability-casting,
+misc-*,
+-misc-include-cleaner,
+-misc-const-correctness,
+misc-no-recursion,
+modernize-*,
+-modernize-use-trailing-return-type,
+-modernize-avoid-c-arrays,
+-modernize-deprecated-headers,
+-modernize-use-nullptr,
+performance-*,
+portability-*,
+readability-*,
+-readability-identifier-length,
+-readability-identifier-naming,
+-readability-magic-numbers,
+'
+
+WarningsAsErrors: '*'
+CheckOptions:
+# https://clang.llvm.org/extra/clang-tidy/checks/readability/identifier-naming.html
+  - { key: readability-identifier-naming.ClassCase,     value: CamelCase  }
+  - { key: readability-identifier-naming.ClassMemberCase, value: camelBack }
+  - { key: readability-identifier-naming.ClassMemberSuffix, value: _ }
+  - { key: readability-identifier-naming.StaticConstantCase, value: camelBack }
+  - { key: readability-identifier-naming.StaticConstantSuffix, value: _ }
+
+  - { key: readability-identifier-naming.NamespaceCase, value: lower_case }
+  - { key: readability-identifier-naming.StructCase,    value: CamelCase }
+
+  - { key: readability-identifier-naming.VariableCase,  value: camelBack }
+  - { key: readability-identifier-naming.FunctionCase,  value: camelBack }
+  - { key: readability-identifier-naming.ParameterCase, value: camelBack }
