@@ -1,9 +1,14 @@
 #include <integermath/integermath.h>
 
-#include <getopt.h>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+
+#if GETOPT_LONG_SUPPORTED
+#include <getopt.h>
+#else
+#include <unistd.h>
+#endif
 
 struct Task
 {
@@ -18,7 +23,7 @@ void displayHelp()
 {
     printf("Usage: ./consolecalc [-h | --help] [-l | --left-number] <number> "
            "[-o | --operation] <operation> [-r | --right-number] <number>\n"
-           "   OR: ./consolecalc <left-number> <operation> <right-number>\n"
+           "   OR: ./consolecalc -- <left-number> <operation> <right-number>\n"
            "-------------------------------------------------------------------"
            "---------------------------------------------------------------\n"
            "\tNote that only operations below are supported now:\n"
@@ -37,16 +42,21 @@ Task makeTask(int argc, char** argv)
 {
     Task taskBody{};
 
-    static struct option int64TOptions[] = {
+    const char* argsPattern = "hl:o:r:";
+    int opt;
+
+#if GETOPT_LONG_SUPPORTED
+    static struct option longOptions[] = {
         {"help", no_argument, nullptr, 'h'},
         {"left-number", required_argument, nullptr, 'l'},
         {"operation", required_argument, nullptr, 'o'},
         {"right-number", required_argument, nullptr, 'r'},
         {nullptr, 0, nullptr, 0}};
 
-    int opt;
-    while ((opt = getopt_long(argc, argv, "hl:o:r:", int64TOptions, nullptr)) != -1)
-    {
+    while ((opt = getopt_long(argc, argv, argsPattern, longOptions, nullptr)) != -1) {
+#else
+    while ((opt = getopt(argc, argv, argsPattern)) != -1) {
+#endif
         switch (opt)
         {
             case 'h':
