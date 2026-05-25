@@ -2,34 +2,6 @@
 
 namespace calc
 {
-void to_json(json& jsonOutput, const calc::Task& taskInput)
-{
-    jsonOutput = json{{"left operand", taskInput.getFirstNum()},
-                      {"operation", taskInput.getOperation()},
-                      {"right operand", taskInput.getSecondNum()},
-                      {"result", taskInput.getResult()}};
-}
-
-void from_json(const json& jsonInput, calc::Task& taskOutput)
-{
-    if (jsonInput.contains("right operand"))
-    {
-        taskOutput.setSecondNum(jsonInput.at("right operand").get<int64_t>());
-    }
-
-    const int64_t first = jsonInput.at("left operand").get<int64_t>();
-    const char operation = jsonInput.at("operation").get<std::string>().at(0);
-
-    taskOutput.setFirstNum(first);
-    try
-    {
-        taskOutput.setOperation(operation);
-    }
-    catch (const std::invalid_argument& e)
-    {
-        throw;
-    }
-}
 
 void Application::displayHelp()
 {
@@ -53,7 +25,7 @@ void Application::makeTask(char** argv)
     const json jsonInput = json::parse(strJson);
     try
     {
-        calculator_ = std::make_unique<Task>(jsonInput.get<Task>());
+        calculator_ = std::make_unique<Task>(Task::fromJson(jsonInput));
     }
     catch (const std::invalid_argument& e)
     {

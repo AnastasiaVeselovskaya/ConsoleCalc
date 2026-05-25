@@ -14,8 +14,6 @@ using json = nlohmann::json;
 
 namespace calc
 {
-void to_json(json& jsonOutput, const calc::Task& taskInput);
-void from_json(const json& jsonInput, calc::Task& taskOutput);
 
 class Application
 {

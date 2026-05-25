@@ -3,6 +3,17 @@
 namespace calc
 {
 
+Task Task::fromJson(const nlohmann::json& j)
+{
+    Task task;
+    if (j.contains("right operand"))
+        task.setSecondNum(j.at("right operand").get<int64_t>());
+
+    task.setFirstNum(j.at("left operand").get<int64_t>());
+    task.setOperation(j.at("operation").get<std::string>().at(0));
+    return task;
+}
+
 bool Task::isValidOperation(char operation)
 {
     return operation == '+' || operation == '-' || operation == '*' ||

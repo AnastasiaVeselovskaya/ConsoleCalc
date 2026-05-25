@@ -3,6 +3,7 @@
 #include <integermath/integermath.h>
 
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 
 namespace calc
@@ -29,6 +30,8 @@ class Task
     int64_t getSecondNum() const;
     char getOperation() const;
     double getResult() const;
+    
+    static Task fromJson(const nlohmann::json& j);
 
   private:
     static bool isValidOperation(char operation);
