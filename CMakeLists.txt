@@ -2,9 +2,23 @@ cmake_minimum_required(VERSION 3.22)
 
 project(ConsoleCalc VERSION 1.0 LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_BUILD_TYPE Debug)
 
-add_executable(consolecalc src/main.cpp)
+add_executable(consolecalc 
+               src/main.cpp
+               src/application.cpp
+               src/calculator.cpp
+               src/logger.cpp)
+
+add_executable(consolecalc_tests
+               src/tests_main.cpp
+               src/tests.cpp
+               src/application.cpp
+               src/calculator.cpp
+               src/logger.cpp)
 
 include(FetchContent)
 
@@ -14,9 +28,29 @@ FetchContent_Declare(
     GIT_TAG main
 )
 
-FetchContent_MakeAvailable(integermath)
+FetchContent_Declare(
+    json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
 
-target_link_libraries(consolecalc PRIVATE integermath)
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG        v1.15.3
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+
+FetchContent_MakeAvailable(integermath
+                           json
+                           googletest
+                           spdlog)
 
 include(GNUInstallDirs)
 
@@ -92,8 +126,17 @@ if(USE_CLANG_TIDY)
     set_target_properties(consolecalc PROPERTIES CXX_CLANG_TIDY "${CLANG_TIDY_COMMAND}")
 endif()
 
-# Check whether the system supports getopt_long
-# and define macros GETOPT_LONG_SUPPORTED based on that info
-include(CheckSymbolExists)
-check_symbol_exists(getopt_long "getopt.h" GETOPT_LONG_SUPPORTED)
-target_compile_definitions(consolecalc PRIVATE GETOPT_LONG_SUPPORTED=$<BOOL:${GETOPT_LONG_SUPPORTED}>)
+target_link_libraries(consolecalc PRIVATE
+    integermath
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog
+    $<$<BOOL:${MINGW}>:ws2_32>
+)
+
+target_link_libraries(consolecalc_tests PRIVATE
+    integermath
+    nlohmann_json::nlohmann_json
+    spdlog::spdlog
+    GTest::gtest
+    GTest::gtest_main
+)

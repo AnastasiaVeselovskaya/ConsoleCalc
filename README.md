@@ -5,7 +5,7 @@
 ## Возможности
 
 - Сложение, вычитание, умножение, деление
-- Возведение в степень (включая отрицательную)
+- Возведение в степень
 - Факториал
 - Проверка переполнения для всех операций
 
@@ -21,20 +21,25 @@ sudo cmake --build build --target install
 
 ## Использование
 
-С флагами:
+Аргумент передаётся как JSON-строка:
 
 ```bash
-build/bin/consolecalc --help
-build/bin/consolecalc -l 2 -o ^ -r 8
-build/bin/consolecalc -l 5 -o !
-build/bin/consolecalc --left-number 10 --operation '/' --right-number 3
-build/bin/consolecalc --left-number 9 --operation !
+build/bin/consolecalc '{"left operand":5, "operation":"+", "right operand":3}'
+build/bin/consolecalc '{"left operand":10, "operation":"/", "right operand":3}'
+build/bin/consolecalc '{"left operand":2, "operation":"^", "right operand":8}'
+build/bin/consolecalc '{"left operand":5, "operation":"!"}'
 ```
 
-Позиционные аргументы:
+Поддерживаемые операции: `+` `-` `*` `/` `^` `!`
+
+Унарные операции (`!`) используют только левый операнд.
+
+## Тесты
+
+Сборка и запуск:
+
 ```bash
-build/bin/consolecalc 5 + 3
-build/bin/consolecalc 10 / 3
-build/bin/consolecalc 2 ^ 8
-build/bin/consolecalc 5 !
+cmake -B build
+cmake --build build --target consolecalc_tests
+./build/bin/consolecalc_tests
 ```

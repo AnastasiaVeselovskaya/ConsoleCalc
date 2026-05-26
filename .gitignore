@@ -1,2 +1,8 @@
 # build directories
 build/
+
+# log directories
+logs/
+
+# IDE artifacts
+.vscode/
