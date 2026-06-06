@@ -23,6 +23,7 @@ void Application::makeTask(char** argv)
         argv[1]; // NOLINT(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     Logger::GetInstance().LogDebug("Input JSON: " + strJson);
     const json jsonInput = json::parse(strJson);
+
     try
     {
         calculator_ = std::make_unique<Task>(Task::fromJson(jsonInput));
@@ -34,9 +35,47 @@ void Application::makeTask(char** argv)
     }
 }
 
+void Application::initCache() {
+    try {
+            cacher_ = std::make_unique<cache::Cacher>();
+            cacher_->InitCache();
+    } catch (const std::exception& e)
+    {
+        Logger::GetInstance().LogDebug("DB init failed: " + std::string(e.what()));
+        return;
+    }
+    Logger::GetInstance().LogInfo("Cache initialized successfully");
+}
+
+void Application::SetCachedResult() {
+    auto cachedValue = cacher_->GetResultFromCache(
+        calculator_->getFirstNum(), calculator_->getOperation(),
+        calculator_->getSecondNum());
+        
+    if (std::holds_alternative<double>(cachedValue)) {
+        calculator_->setResult(std::get<double>(cachedValue));
+        return;
+    }
+
+    auto ec = std::get<cache::ErrorCode>(cachedValue);
+
+    switch (ec) {
+    case cache::ErrorCode::DivisionByZero:
+        throw std::runtime_error("");
+    case cache::ErrorCode::FactorialTooLarge:
+        throw std::out_of_range("");
+    case cache::ErrorCode::NegativeFactorial:
+        throw NegativeFactorialError("");
+    case cache::ErrorCode::Overflow:
+        throw std::overflow_error("");
+    case cache::ErrorCode::NotFoundInCache:
+        return;
+    }
+}
+
 void Application::printResult() const
 {
-    const double result = calculator_->getResult();
+    const double result = calculator_->getResult().value();
 
     Logger::GetInstance().LogInfo("Result: " + std::to_string(result));
 
@@ -61,11 +100,25 @@ void Application::printResult() const
             return firstNum + operation + " = " + strRes + "\n";
         }
         return firstNum + " " + operation + " " +
-               std::to_string(calculator_->getSecondNum()) + " = " + strRes +
+               std::to_string(calculator_->getSecondNum().value()) + " = " + strRes +
                "\n";
     };
 
     std::cout << getResultString();
+}
+
+void Application::CacheCalculation(cache::ErrorCode ec) {
+    cache::CalculationLog log{
+        calculator_->getFirstNum(), 
+        calculator_->getSecondNum(),
+        calculator_->getOperation(), 
+        (ec == cache::ErrorCode::Success ? 
+            calculator_->getResult() 
+            : std::nullopt), 
+        ec
+    };
+
+    cacher_->Cache(log);
 }
 
 void Application::applicationRun(int argc, char** argv)
@@ -79,6 +132,8 @@ void Application::applicationRun(int argc, char** argv)
     }
 
     Logger::GetInstance().LogInfo("Application started");
+
+    initCache();
 
     try
     {
@@ -105,7 +160,20 @@ void Application::applicationRun(int argc, char** argv)
                 "Calculator was not initialized correctly");
             return;
         }
+
+        SetCachedResult();
+
+        if (calculator_->getResult().has_value()) {
+            Logger::GetInstance().LogInfo("Got result from cache: " 
+                + std::to_string(calculator_->getResult().value()));
+            printResult();
+            return;
+        }
+
+        Logger::GetInstance().LogInfo("Cached result not found");
+        Logger::GetInstance().LogInfo("Calculating the result using Task class");
         calculator_->makeCalculate();
+        CacheCalculation(cache::ErrorCode::Success);
         printResult();
     }
     // NegativeFactorialError is derived from std::invalid_argument,
@@ -113,21 +181,25 @@ void Application::applicationRun(int argc, char** argv)
     catch (const calc::NegativeFactorialError& e)
     {
         std::cerr << "Negative number passed for factorial argument\n";
+        CacheCalculation(cache::ErrorCode::NegativeFactorial);
         Logger::GetInstance().LogWarning(e.what());
     }
     catch (const std::overflow_error& e)
     {
         std::cerr << "Operation resulted in type overflow\n";
+        CacheCalculation(cache::ErrorCode::Overflow);
         Logger::GetInstance().LogError("Overflow: " + std::string(e.what()));
     }
     catch (const std::runtime_error& e)
     {
         std::cerr << "Division by zero\n";
+        CacheCalculation(cache::ErrorCode::DivisionByZero);
         Logger::GetInstance().LogError("Division by zero");
     }
     catch (const std::out_of_range& e)
     {
         std::cerr << "Factorial argument too large and will cause overflow\n";
+        CacheCalculation(cache::ErrorCode::FactorialTooLarge);
         Logger::GetInstance().LogError("Factorial argument too large");
     }
     catch (const std::invalid_argument& e)
