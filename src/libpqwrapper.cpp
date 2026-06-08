@@ -14,11 +14,11 @@ void PgResult::CheckStatus() const {
     }
 }
 
-int PgResult::Rows() const {
+int PgResult::Rows() const noexcept {
     return PQntuples(result_.get());
 }
 
-int PgResult::Cols() const {
+int PgResult::Cols() const noexcept {
     return PQnfields(result_.get());
 }
 
@@ -26,7 +26,7 @@ std::string PgResult::Value(int row, int col) const {
     return PQgetvalue(result_.get(), row, col);
 }
 
-bool PgResult::IsNull(int row, int col) const {
+bool PgResult::IsNull(int row, int col) const noexcept {
     return PQgetisnull(result_.get(), row, col) == 1;
 }
 
@@ -55,7 +55,7 @@ PgResult PgConnection::ExecWithParams(const std::string& sql, const std::vector<
     ));
 }
 
-bool PgConnection::IsConnected() const {
+bool PgConnection::IsConnected() const noexcept {
     return PQstatus(connection_.get());
 }
 

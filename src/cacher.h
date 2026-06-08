@@ -33,11 +33,17 @@ struct CalculationLog {
 class Cacher {
 public:
     explicit Cacher();
+    Cacher (const Cacher& other) = delete;
+    Cacher& operator=(const Cacher& other) = delete;
+    Cacher (Cacher&& other) noexcept = default;
+    Cacher& operator=(Cacher&& other) noexcept = default;
+    ~Cacher() = default;
+    
     void InitCache() const;
     void Cache(const CalculationLog& record);
     std::variant<ErrorCode, double> GetResultFromCache(int64_t first, 
                                              char operation, 
-                                             std::optional<int64_t> second);
+                                             std::optional<int64_t> second) const;
 
 private:
     const char* dbConnectionStr =
@@ -46,7 +52,7 @@ private:
     void SaveToShortTermCache(const CalculationLog& record);
     std::string MakeCacheKey(int64_t first, 
                              char operation, 
-                             std::optional<int64_t> second);
+                             std::optional<int64_t> second) const noexcept;
     void WarmUpCache();
     std::variant<ErrorCode, double> GetResultFromDB(int64_t first,
                                                     char operation,

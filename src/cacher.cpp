@@ -29,7 +29,7 @@ void Cacher::Cache(const CalculationLog& record) {
 
 std::variant<ErrorCode, double> Cacher::GetResultFromCache(int64_t first, 
                                                            char operation, 
-                                                           std::optional<int64_t> second) {
+                                                           std::optional<int64_t> second) const {
     std::string key = MakeCacheKey(first, operation, second);
     auto it = shortTermCache_.find(key);
     if (it != shortTermCache_.end()) {
@@ -69,7 +69,7 @@ void Cacher::SaveToShortTermCache(const CalculationLog& record) {
 
 std::string Cacher::MakeCacheKey(int64_t first, 
                              char operation, 
-                             std::optional<int64_t> second) {
+                             std::optional<int64_t> second) const noexcept {
     std::string key = std::to_string(first) + operation;
     if (second.has_value()) {
         key += std::to_string(second.value());

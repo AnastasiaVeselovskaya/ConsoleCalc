@@ -24,26 +24,12 @@ void Application::makeTask(char** argv)
     Logger::GetInstance().LogDebug("Input JSON: " + strJson);
     const json jsonInput = json::parse(strJson);
 
-    try
-    {
-        calculator_ = std::make_unique<Task>(Task::fromJson(jsonInput));
-    }
-    catch (const std::invalid_argument& e)
-    {
-        Logger::GetInstance().LogError("Error " + std::string(e.what()));
-        throw;
-    }
+    calculator_ = std::make_unique<Task>(Task::fromJson(jsonInput));
 }
 
 void Application::initCache() {
-    try {
-            cacher_ = std::make_unique<cache::Cacher>();
-            cacher_->InitCache();
-    } catch (const std::exception& e)
-    {
-        Logger::GetInstance().LogDebug("DB init failed: " + std::string(e.what()));
-        return;
-    }
+    cacher_ = std::make_unique<cache::Cacher>();
+    cacher_->InitCache();
     Logger::GetInstance().LogInfo("Cache initialized successfully");
 }
 
@@ -59,7 +45,13 @@ void Application::SetCachedResult() {
 
     auto ec = std::get<cache::ErrorCode>(cachedValue);
 
+    // Caching internal errors do not affect the overall ApplicationRun,
+    // so they're not throwing errors, but logging them instead.
+    // Errors as a result of calculation will throw errors according to ec.
     switch (ec) {
+    case cache::ErrorCode::Success:
+        Logger::GetInstance().LogError("Result undefined for successfully cached opeation");
+        return;
     case cache::ErrorCode::DivisionByZero:
         throw std::runtime_error("");
     case cache::ErrorCode::FactorialTooLarge:
@@ -69,6 +61,10 @@ void Application::SetCachedResult() {
     case cache::ErrorCode::Overflow:
         throw std::overflow_error("");
     case cache::ErrorCode::NotFoundInCache:
+        return;
+    default:
+        Logger::GetInstance().LogError("Unexpected error code in cache: "
+             + std::to_string(static_cast<int>(ec)));
         return;
     }
 }

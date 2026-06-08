@@ -7,11 +7,12 @@
 class Logger
 {
   private:
-    Logger();
+    explicit Logger();
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
     Logger(Logger&&) = delete;
     Logger& operator=(Logger&&) = delete;
+    ~Logger() = default;
 
     std::string logsPath_ = "logs/calc_logs.txt";
     int maxSize_ = 1024 * 1024 * 10;

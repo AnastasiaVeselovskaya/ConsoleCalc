@@ -21,6 +21,13 @@ class NegativeFactorialError : public std::invalid_argument
 class Task
 {
   public:
+    explicit Task() = default;
+    Task (const Task& other) = delete;
+    Task& operator=(const Task& other) = delete;
+    Task (Task&& other) noexcept = default;
+    Task& operator=(Task&& other) noexcept = default;
+    ~Task() = default;
+
     double makeCalculate();
 
     void setFirstNum(int64_t firstNum);
@@ -41,9 +48,9 @@ class Task
     std::unique_ptr<integermath::CalculationModule<int64_t>> calc_module_{
         std::make_unique<integermath::CalculationModule<int64_t>>()};
     int64_t firstNum_;
-    std::optional<int64_t> secondNum_ = std::nullopt;
+    std::optional<int64_t> secondNum_;
     char operation_;
-    std::optional<double> result_ = std::nullopt;
+    std::optional<double> result_;
     // Since factorial works recursively, passing too large a number will cause stack overflow.
     // Hardcoded capacity for it will prevent segmentation faults.
     int64_t factorialArgCap_ = 20;
