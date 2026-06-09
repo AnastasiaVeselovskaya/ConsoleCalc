@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <optional>
 #include <stdexcept>
 
 namespace calc
@@ -20,16 +21,24 @@ class NegativeFactorialError : public std::invalid_argument
 class Task
 {
   public:
+    explicit Task() = default;
+    Task (const Task& other) = delete;
+    Task& operator=(const Task& other) = delete;
+    Task (Task&& other) noexcept = default;
+    Task& operator=(Task&& other) noexcept = default;
+    ~Task() = default;
+
     double makeCalculate();
 
     void setFirstNum(int64_t firstNum);
     void setSecondNum(int64_t secondNum);
     void setOperation(char operation);
+    void setResult(double result);
 
     int64_t getFirstNum() const;
-    int64_t getSecondNum() const;
+    std::optional<int64_t> getSecondNum() const;
     char getOperation() const;
-    double getResult() const;
+    std::optional<double> getResult() const;
     
     static Task fromJson(const nlohmann::json& j);
 
@@ -39,9 +48,9 @@ class Task
     std::unique_ptr<integermath::CalculationModule<int64_t>> calc_module_{
         std::make_unique<integermath::CalculationModule<int64_t>>()};
     int64_t firstNum_;
-    int64_t secondNum_;
+    std::optional<int64_t> secondNum_;
     char operation_;
-    double result_;
+    std::optional<double> result_;
     // Since factorial works recursively, passing too large a number will cause stack overflow.
     // Hardcoded capacity for it will prevent segmentation faults.
     int64_t factorialArgCap_ = 20;
