@@ -1,13 +1,17 @@
 #pragma once
-#include <cstdint>
+#include "libpqwrapper.h"
+
 #include <climits>
+#include <cstdint>
 #include <deque>
+#include <mutex>
+#include <shared_mutex>
 #include <optional>
 #include <unordered_map>
 #include <variant>
-#include "libpqwrapper.h"
 
-namespace cache {
+namespace cache
+{
 
 enum class ErrorCode
 {
@@ -20,8 +24,8 @@ enum class ErrorCode
     NotFoundInCache = 6
 };
 
-
-struct CalculationLog {
+struct CalculationLog
+{
     int64_t leftNum;
     std::optional<int64_t> rightNum;
     char operation;
@@ -29,36 +33,37 @@ struct CalculationLog {
     ErrorCode status;
 };
 
-
-class Cacher {
-public:
+class Cacher
+{
+  public:
     explicit Cacher();
-    Cacher (const Cacher& other) = delete;
+    Cacher(const Cacher& other) = delete;
     Cacher& operator=(const Cacher& other) = delete;
-    Cacher (Cacher&& other) noexcept = default;
-    Cacher& operator=(Cacher&& other) noexcept = default;
+    Cacher(Cacher&& other) noexcept = delete;
+    Cacher& operator=(Cacher&& other) noexcept = delete;
     ~Cacher() = default;
-    
+
     void InitCache() const;
     void Cache(const CalculationLog& record);
-    std::variant<ErrorCode, double> GetResultFromCache(int64_t first, 
-                                             char operation, 
-                                             std::optional<int64_t> second) const;
+    std::variant<ErrorCode, double>
+        GetResultFromCache(int64_t first, char operation,
+                           std::optional<int64_t> second) const;
 
-private:
-    const char* dbConnectionStr =
-        "host=127.0.0.1 port=5432 dbname=CalcCache user=calcuser password=qweasd123";
+  private:
+    const char* dbConnectionStr = "host=127.0.0.1 port=5432 dbname=CalcCache "
+                                  "user=calcuser password=qweasd123";
     void SaveToDBCache(const CalculationLog& record) const;
     void SaveToShortTermCache(const CalculationLog& record);
-    std::string MakeCacheKey(int64_t first, 
-                             char operation, 
+    std::string MakeCacheKey(int64_t first, char operation,
                              std::optional<int64_t> second) const noexcept;
     void WarmUpCache();
-    std::variant<ErrorCode, double> GetResultFromDB(int64_t first,
-                                                    char operation,
-                                                    std::optional<int64_t> second) const;
+    std::variant<ErrorCode, double>
+        GetResultFromDB(int64_t first, char operation,
+                        std::optional<int64_t> second) const;
     libpqwrapper::PgConnection connection_;
-    std::unordered_map<std::string, std::variant<ErrorCode, double>> shortTermCache_;
+    std::unordered_map<std::string, std::variant<ErrorCode, double>>
+        shortTermCache_;
+    mutable std::shared_mutex cacheMutex_;
 };
 
-}
+} // namespace cache

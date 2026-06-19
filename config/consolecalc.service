@@ -1,0 +1,16 @@
+[Unit]
+Description=Console Calculator Service
+After=postgresql.service network.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/consolecalc
+Restart=on-failure
+User=consolecalc
+Group=consolecalc
+LogsDirectory=consolecalc
+LogsDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target

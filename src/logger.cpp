@@ -2,8 +2,17 @@
 
 Logger::Logger()
 {
+    spdlog::drop_all();
+    std::string logsPath_;
+
+    const char* logsDir = getenv("LOGS_DIRECTORY");
+    logsPath_ = logsDir != nullptr
+                ? std::string(logsDir) + "/calc_logs.txt"
+                : "/var/log/consolecalc/calc_logs.txt";
+    
     spdLogger_ = spdlog::rotating_logger_mt("calc_logger", logsPath_, maxSize_,
                                             maxFiles_);
+    spdLogger_->flush_on(spdlog::level::trace);
 }
 
 Logger& Logger::GetInstance()

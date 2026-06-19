@@ -6,7 +6,8 @@ namespace calc
 Task Task::fromJson(const nlohmann::json& j)
 {
     Task task;
-    if (j.contains("right operand")) {
+    if (j.contains("right operand"))
+    {
         task.setSecondNum(j.at("right operand").get<int64_t>());
     }
 
@@ -24,8 +25,9 @@ bool Task::isValidOperation(char operation)
 double Task::makeCalculate()
 {
     calc_module_->SetLeftNumber(firstNum_);
-    if (secondNum_.has_value()) {
-        calc_module_->SetRightNumber(secondNum_.value());        
+    if (secondNum_.has_value())
+    {
+        calc_module_->SetRightNumber(secondNum_.value());
     }
 
     double result = 0;
@@ -106,7 +108,8 @@ void Task::setSecondNum(int64_t secondNum)
     secondNum_ = secondNum;
 }
 
-void Task::setResult(double result) {
+void Task::setResult(double result)
+{
     result_ = result;
 }
 

@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+if ! id -u consolecalc > /dev/null 2>&1; then
+    adduser --system --no-create-home --group consolecalc
+fi
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+    systemctl enable consolecalc.service
+    systemctl start consolecalc.service
+fi
+
+exit 0

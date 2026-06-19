@@ -1,4 +1,5 @@
 #pragma once
+#include "spdlog/spdlog.h"
 #include "spdlog/logger.h"
 #include "spdlog/sinks/rotating_file_sink.h"
 
@@ -14,7 +15,7 @@ class Logger
     Logger& operator=(Logger&&) = delete;
     ~Logger() = default;
 
-    std::string logsPath_ = "logs/calc_logs.txt";
+    std::string logsPath_;
     int maxSize_ = 1024 * 1024 * 10;
     int maxFiles_ = 3;
     // Unique_ptr would fit better for Meyers' Singleton,
