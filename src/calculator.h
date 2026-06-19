@@ -2,8 +2,9 @@
 
 #include <integermath/integermath.h>
 
-#include <memory>
 #include <nlohmann/json.hpp>
+
+#include <memory>
 #include <optional>
 #include <stdexcept>
 
@@ -22,9 +23,9 @@ class Task
 {
   public:
     explicit Task() = default;
-    Task (const Task& other) = delete;
+    Task(const Task& other) = delete;
     Task& operator=(const Task& other) = delete;
-    Task (Task&& other) noexcept = default;
+    Task(Task&& other) noexcept = default;
     Task& operator=(Task&& other) noexcept = default;
     ~Task() = default;
 
@@ -39,7 +40,7 @@ class Task
     std::optional<int64_t> getSecondNum() const;
     char getOperation() const;
     std::optional<double> getResult() const;
-    
+
     static Task fromJson(const nlohmann::json& j);
 
   private:

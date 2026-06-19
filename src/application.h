@@ -21,20 +21,20 @@ class Application
 {
   public:
     explicit Application() = default;
-    Application (const Application& other) = delete;
+    Application(const Application& other) = delete;
     Application& operator=(const Application& other) = delete;
-    Application (Application&& other) noexcept = default;
+    Application(Application&& other) noexcept = default;
     Application& operator=(Application&& other) noexcept = default;
     ~Application() = default;
 
-    void applicationRun(int argc, char** argv);
+    std::string applicationRun(const std::string& jsonRequest);
+    void initCache();
     void printResult() const;
     static void displayHelp();
 
   private:
-    void initCache();
     void SetCachedResult();
-    void makeTask(char** argv);
+    void makeTask(const std::string& jsonRequest);
     void CacheCalculation(cache::ErrorCode ec);
 
     int doublePrecision_ = 6;

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -e
+
+if [ "$1" = "purge" ]; then
+    deluser --system consolecalc || true
+    
+    # Удаляем логи
+    rm -rf /var/log/consolecalc || true
+fi
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+fi
+
+exit 0

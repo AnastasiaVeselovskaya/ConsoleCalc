@@ -3,147 +3,200 @@
 void ApplicationTest::SetUp()
 {
     app = std::make_unique<calc::Application>();
-    argv = new char*[2];
-    argv[0] = const_cast<char*>("consolecalc");
+    app->initCache();
 }
 
 void ApplicationTest::TearDown()
 {
     app.reset();
-    delete[] argv;
 }
 
-std::string ApplicationTest::CaptureCommandOutput(const char* command)
+void ServerTest::SetUp()
 {
-    argv[1] = const_cast<char*>(command);
-    ::testing::internal::CaptureStdout();
-    try
+    app_ = std::make_unique<calc::Application>();
+    app_->initCache();
+
+    server_ = std::make_unique<server::Server>(
+        ioc_, kPort, *app_, [this]() { serverReady_.store(true); });
+    server_->Run();
+
+    workerThread_ = std::thread([this]() { ioc_.run(); });
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!serverReady_.load())
     {
-        app->applicationRun(2, argv);
+        if (std::chrono::steady_clock::now() > deadline)
+            throw std::runtime_error("Server did not start in time");
+        std::this_thread::yield();
     }
-    catch (...)
-    {
-        ::testing::internal::GetCapturedStdout();
-        throw;
-    }
-    std::string captured = ::testing::internal::GetCapturedStdout();
-    return captured;
+
+    client_ = std::make_unique<test::TestClient>("127.0.0.1", kPort);
 }
 
-std::string ApplicationTest::CaptureCommandError(const char* command)
+void ServerTest::TearDown()
 {
-    argv[1] = const_cast<char*>(command);
-    ::testing::internal::CaptureStderr();
-    try
-    {
-        app->applicationRun(2, argv);
-    }
-    catch (...)
-    {
-        ::testing::internal::GetCapturedStdout();
-        throw;
-    }
-    std::string captured = ::testing::internal::GetCapturedStderr();
-    return captured;
+    client_.reset();
+    ioc_.stop();
+    workerThread_.join();
+    server_.reset();
+    app_.reset();
 }
 
-std::string ApplicationTest::HelpOutput()
+std::string ServerTest::Send(const std::string& request)
 {
-    return "Usage: {\"left operand\":<operand>, \"operation\":<operation>, "
-           "\"right operand\":<operand>}\n"
-           "-------------------------------------------------------------------"
-           "---------------------------------------------------------------\n"
-           "\tNote that only operations below are supported now:\n"
-           "\t+ - '/' '*' ! ^\n"
-           "\tUnary operations will only use left operand and do not require "
-           "right operand.\n";
+    return client_->Send(request);
+}
+
+TEST_F(ServerTest, SumReturnsCorrectResult)
+{
+    auto result = json::parse(
+        Send("{\"left operand\":5,\"operation\":\"+\",\"right operand\":9}"));
+    ASSERT_EQ(result["result"], 14);
+}
+
+TEST_F(ServerTest, SubtractReturnsCorrectResult)
+{
+    auto result = json::parse(
+        Send("{\"left operand\":10,\"operation\":\"-\",\"right operand\":3}"));
+    ASSERT_EQ(result["result"], 7);
+}
+
+TEST_F(ServerTest, MultiplyReturnsCorrectResult)
+{
+    auto result = json::parse(
+        Send("{\"left operand\":6,\"operation\":\"*\",\"right operand\":7}"));
+    ASSERT_EQ(result["result"], 42);
+}
+
+TEST_F(ServerTest, DivideReturnsCorrectResult)
+{
+    auto result = json::parse(
+        Send("{\"left operand\":10,\"operation\":\"/\",\"right operand\":2}"));
+    ASSERT_EQ(result["result"], 5);
+}
+
+TEST_F(ServerTest, PowerReturnsCorrectResult)
+{
+    auto result = json::parse(
+        Send("{\"left operand\":2,\"operation\":\"^\",\"right operand\":10}"));
+    ASSERT_EQ(result["result"], 1024);
+}
+
+TEST_F(ServerTest, FactorialReturnsCorrectResult)
+{
+    auto result = json::parse(Send("{\"left operand\":5,\"operation\":\"!\"}"));
+    ASSERT_EQ(result["result"], 120);
+}
+
+TEST_F(ServerTest, DivisionByZeroReturnsError)
+{
+    auto result = json::parse(
+        Send("{\"left operand\":5,\"operation\":\"/\",\"right operand\":0}"));
+    ASSERT_TRUE(result.contains("error"));
+    ASSERT_EQ(result["error"], "Division by zero");
+}
+
+TEST_F(ServerTest, NegativeFactorialReturnsError)
+{
+    auto result =
+        json::parse(Send("{\"left operand\":-3,\"operation\":\"!\"}"));
+    ASSERT_TRUE(result.contains("error"));
+    ASSERT_EQ(result["error"], "Negative factorial argument");
+}
+
+TEST_F(ServerTest, InvalidJsonReturnsError)
+{
+    auto result = json::parse(Send("not a json"));
+    ASSERT_TRUE(result.contains("error"));
 }
 
 TEST_F(ApplicationTest, InvalidJsonFormatPrintsHelp)
 {
-    ASSERT_EQ(HelpOutput(), CaptureCommandOutput("1 + 2"));
-}
-
-TEST_F(ApplicationTest, FactorialPrintsResult)
-{
-    ASSERT_EQ("5! = 120\n",
-              CaptureCommandOutput("{\"left operand\":5,\"operation\":\"!\"}"));
-}
-
-TEST_F(ApplicationTest, SumPrintsResult)
-{
-    ASSERT_EQ(
-        "5 + 9 = 14\n",
-        CaptureCommandOutput(
-            "{\"left operand\":5,\"operation\":\"+\",\"right operand\":9}"));
-}
-
-TEST_F(ApplicationTest, SubtractPrintsResult)
-{
-    ASSERT_EQ(
-        "5 - 9 = -4\n",
-        CaptureCommandOutput(
-            "{\"left operand\":5,\"operation\":\"-\",\"right operand\":9}"));
-}
-
-TEST_F(ApplicationTest, MultiplyPrintsResult)
-{
-    ASSERT_EQ(
-        "5 * 9 = 45\n",
-        CaptureCommandOutput(
-            "{\"left operand\":5,\"operation\":\"*\",\"right operand\":9}"));
-}
-
-TEST_F(ApplicationTest, DividePrintsResult)
-{
-    ASSERT_EQ(
-        "5 / 9 = 0.555556\n",
-        CaptureCommandOutput(
-            "{\"left operand\":5,\"operation\":\"/\",\"right operand\":9}"));
+    auto result = json::parse(app->applicationRun("1 + 2"));
+    ASSERT_TRUE(result.contains("error"));
 }
 
 TEST_F(ApplicationTest, PowerPrintsResult)
 {
-    ASSERT_EQ(
-        "5 ^ 9 = 1953125\n",
-        CaptureCommandOutput(
-            "{\"left operand\":5,\"operation\":\"^\",\"right operand\":9}"));
+    auto result = json::parse(app->applicationRun(
+        "{\"left operand\":5,\"operation\":\"^\",\"right operand\":9}"));
+    ASSERT_EQ(result["result"], 1953125);
 }
 
 TEST_F(ApplicationTest, NegativeFactorialPrintsError)
 {
-    ASSERT_EQ("Negative number passed for factorial argument\n",
-              CaptureCommandError("{\"left operand\":-5,\"operation\":\"!\"}"));
+    auto result = json::parse(
+        app->applicationRun("{\"left operand\":-5,\"operation\":\"!\"}"));
+    ASSERT_TRUE(result.contains("error"));
+    ASSERT_EQ(result["error"], "Negative factorial argument");
 }
 
 TEST_F(ApplicationTest, LargeFactorialPrintsError)
 {
-    ASSERT_EQ("Factorial argument too large and will cause overflow\n",
-              CaptureCommandError(
-                  "{\"left operand\":500000000,\"operation\":\"!\"}"));
+    auto result = json::parse(app->applicationRun(
+        "{\"left operand\":500000000,\"operation\":\"!\"}"));
+    ASSERT_TRUE(result.contains("error"));
+    ASSERT_EQ(result["error"], "Factorial argument too large");
 }
 
 TEST_F(ApplicationTest, DivisionByZeroPrintsError)
 {
-    ASSERT_EQ(
-        "Division by zero\n",
-        CaptureCommandError(
-            "{\"left operand\":5,\"operation\":\"/\",\"right operand\":0}"));
+    auto result = json::parse(app->applicationRun(
+        "{\"left operand\":5,\"operation\":\"/\",\"right operand\":0}"));
+    ASSERT_TRUE(result.contains("error"));
+    ASSERT_EQ(result["error"], "Division by zero");
 }
 
 TEST_F(ApplicationTest, OverflowPrintsError)
 {
-    ASSERT_EQ(
-        "Operation resulted in type overflow\n",
-        CaptureCommandError(
-            "{\"left operand\":9223372036854775807,\"operation\":\"*\",\"right "
-            "operand\":2}"));
+    auto result = json::parse(app->applicationRun(
+        "{\"left operand\":9223372036854775807,\"operation\":\"*\",\"right "
+        "operand\":2}"));
+    ASSERT_TRUE(result.contains("error"));
+    ASSERT_EQ(result["error"], "Overflow");
 }
 
 TEST_F(ApplicationTest, InvalidOperationPrintsError)
 {
-    ASSERT_EQ("Operation is invalid or not supported at the moment\n",
-              CaptureCommandError("{\"left operand\":5,\"operation\":\")\"}"));
+    auto result = json::parse(
+        app->applicationRun("{\"left operand\":5,\"operation\":\")\"}"));
+    ASSERT_TRUE(result.contains("error"));
+    ASSERT_EQ(result["error"], "Operation is invalid or not supported");
+}
+
+TEST_F(ApplicationTest, FactorialPrintsResult)
+{
+    auto result = json::parse(
+        app->applicationRun("{\"left operand\":5,\"operation\":\"!\"}"));
+    ASSERT_EQ(result["result"], 120);
+}
+
+TEST_F(ApplicationTest, SumPrintsResult)
+{
+    auto result = json::parse(app->applicationRun(
+        "{\"left operand\":5,\"operation\":\"+\",\"right operand\":9}"));
+    ASSERT_EQ(result["result"], 14);
+}
+
+TEST_F(ApplicationTest, SubtractPrintsResult)
+{
+    auto result = json::parse(app->applicationRun(
+        "{\"left operand\":5,\"operation\":\"-\",\"right operand\":9}"));
+    ASSERT_EQ(result["result"], -4);
+}
+
+TEST_F(ApplicationTest, MultiplyPrintsResult)
+{
+    auto result = json::parse(app->applicationRun(
+        "{\"left operand\":5,\"operation\":\"*\",\"right operand\":9}"));
+    ASSERT_EQ(result["result"], 45);
+}
+
+TEST_F(ApplicationTest, DividePrintsResult)
+{
+    auto result = json::parse(app->applicationRun(
+        "{\"left operand\":5,\"operation\":\"/\",\"right operand\":9}"));
+    ASSERT_EQ(result["result"], 0.555556);
 }
 
 void CalculatorTest::setTask(int64_t left, char op, int64_t right)
